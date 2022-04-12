@@ -70,6 +70,8 @@ services:
     depends_on:
       - zookeeper-1
       - kafka-broker-1
+    ports:
+      - 8083:8083
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka-broker-1:19093
       CONNECT_GROUP_ID: 'kafka-connect'
@@ -81,10 +83,10 @@ services:
       CONNECT_OFFSET_STORAGE_TOPIC: 'connect-offset-storage'
       CONNECT_STATUS_STORAGE_TOPIC: 'connect-status-storage'
       CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter" 
-      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter" 
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter" 
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter" 
-      CONNECT_PLUGIN_PATH: /usr/share/java
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_PLUGIN_PATH: /etc/confluent/plugins
       CONNECT_SECURITY_PROTOCOL: 'SSL'
       CONNECT_SSL_KEY_PASSWORD: confluent
       CONNECT_SSL_KEYSTORE_LOCATION: '/etc/confluent/secrets/kafka.consumer.keystore.jks'
@@ -110,7 +112,8 @@ services:
       CONNECT_CONSUMER_SSL_TRUSTSTORE_LOCATION: '/etc/confluent/secrets/kafka.consumer.truststore.jks'
       CONNECT_CONSUMER_SSL_TRUSTSTORE_PASSWORD: confluent
     volumes:
-      - ${KAFKA_SSL_SECRETS_DIR}/connect:/etc/confluent/secrets/
+      - ${KAFKA_SSL_SECRETS_DIR}/connect:/etc/confluent/secrets
+      - ${KAFKA_SSL_SECRETS_DIR}/connect/plugins:/etc/confluent/plugins
     networks:
       - kafka-cluster-network
 

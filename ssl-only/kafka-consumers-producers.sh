@@ -6,7 +6,7 @@ docker ps -aq | xargs docker stop | xargs docker rm
 
 sudo docker-compose -f single-node-docker-compose.yml up --build -d
 
-export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
+export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/kafka-security-ssl-sasl/secrets
 sudo ./start_ssl_only_cluster.sh
 
 export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
@@ -62,10 +62,10 @@ sudo docker run --name consumer-UI-another -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/
 
 
 # KAFKA Connect
-sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --create --topic connect-test --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
-sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --create --topic quickstart-config --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
-sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --create --topic quickstart-offsets --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
-sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --create --topic quickstart-status --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
+sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic test --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
+sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic quickstart-config --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
+sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic quickstart-offsets --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
+sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic quickstart-status --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
 
-sudo docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-consumer --bootstrap-server kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --topic connect-test --from-beginning
+sudo docker run --name consumer-dev -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/consumer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic test --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
 
