@@ -5,9 +5,7 @@ services:
   mqtt:
     image: eclipse-mosquitto:latest
     hostname: mqtt
-    container_name: mqtt
-    depends_on: 
-    - fastdata    
+    container_name: mqtt   
     ports:
       - 8080:8080 
       - 1883:1883
