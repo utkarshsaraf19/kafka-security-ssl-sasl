@@ -1,0 +1,15 @@
+version: "3.2"
+volumes:
+  configFolder:
+services:
+  mqtt:
+    image: eclipse-mosquitto:latest
+    hostname: mqtt
+    container_name: mqtt
+    depends_on: 
+    - fastdata    
+    ports:
+      - 8080:8080 
+      - 1883:1883
+  networks:
+  - kafka-cluster-network

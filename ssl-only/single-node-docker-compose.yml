@@ -117,6 +117,18 @@ services:
     networks:
       - kafka-cluster-network
 
+  mqtt:
+      image: toke/mosquitto
+      container_name: mqtt
+      hostname: mqtt
+      expose:
+        - 1883
+      ports:
+        - 1883:1883
+      restart: unless-stopped
+      networks:
+      - kafka-cluster-network
+
 networks:
   kafka-cluster-network:
     driver: bridge

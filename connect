@@ -2,10 +2,21 @@
 curl -X PUT \
      -H "Content-Type: application/json" \
      --data '{
-               "tasks.max": "1",
-               "connector.class": "com.sintef.asam.MqttSourceConnector",
-               "mqtt.connector.broker.uri": "tcp://broker.emqx.io:1883",
-            "mqtt.connector.broker.topic": "python/mqtt",
-            "mqtt.connector.kafka.topic": "test"
+               "name": "mqtt-source",
+"connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
+"tasks.max": 1,
+"connect.mqtt.kcql" : "INSERT INTO mqtt SELECT * FROM /mjson WITHCONVERTER=`com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`",
+"connect.mqtt.client.id": "dm_source_id",
+"connect.mqtt.hosts": "tcp://mqtt:1883",
+"connect.mqtt.service.quality": 1
           }' \
-     http://localhost:8083/connectors/filestream-source/config | jq .
+     http://localhost:8083/connectors/mqtt-source/config | jq .
+
+
+name=mqtt-source
+connector.class=com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector
+tasks.max=1
+connect.mqtt.kcql=INSERT INTO mqtt SELECT * FROM /mjson WITHCONVERTER=`com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`
+connect.mqtt.client.id=dm_source_id
+connect.mqtt.hosts=tcp://mqtt:1883
+connect.mqtt.service.quality=1
