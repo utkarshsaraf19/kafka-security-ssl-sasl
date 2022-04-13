@@ -1,6 +1,15 @@
  
 curl -X PUT \
      -H "Content-Type: application/json" \
+     --data '{ "name": "Mqtt-Sensor-Source","connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector","tasks.max": 1,"connect.mqtt.kcql": "INSERT INTO mqtt SELECT * FROM DevtestTrue WITHCONVERTER: `com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`",
+"connect.mqtt.connection.clean": "true","connect.mqtt.connection.timeout: 1000,"connect.mqtt.connection.keep.alive: 1000,"connect.mqtt.client.id": "lenses_mqtt_sensor",
+"connect.mqtt.converter.throw.on.error": "true","connect.mqtt.hosts: "tcp://mqtt:1883","connect.mqtt.service.quality: 1,"key.converter": "org.apache.kafka.connect.json.JsonConverter",
+key.converter.schemas.enable: "false",value.converter: "org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable": "false"}' \
+     http://localhost:8083/connectors/mqtt-source-1/config | jq .
+
+
+curl -X PUT \
+     -H "Content-Type: application/json" \
      --data '{
                "name": "mqtt-source",
 "connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
@@ -8,15 +17,99 @@ curl -X PUT \
 "connect.mqtt.kcql" : "INSERT INTO mqtt SELECT * FROM /mjson WITHCONVERTER=`com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`",
 "connect.mqtt.client.id": "dm_source_id",
 "connect.mqtt.hosts": "tcp://mqtt:1883",
-"connect.mqtt.service.quality": 1
+"connect.mqtt.service.quality": 1,"key.converter": "org.apache.kafka.connect.json.JsonConverter",
+"key.converter.schemas.enable": "false","value.converter": "org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable": "false"
           }' \
      http://localhost:8083/connectors/mqtt-source/config | jq .
 
+name: mqtt-source
+connector.class: com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector
+tasks.max: 1
+connect.mqtt.kcql: INSERT INTO mqtt SELECT * FROM /mjson WITHCONVERTER: `com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`
+connect.mqtt.client.id: dm_source_id
+connect.mqtt.hosts: tcp://mqtt:1883
+connect.mqtt.service.quality: 1
 
-name=mqtt-source
-connector.class=com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector
-tasks.max=1
-connect.mqtt.kcql=INSERT INTO mqtt SELECT * FROM /mjson WITHCONVERTER=`com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`
-connect.mqtt.client.id=dm_source_id
-connect.mqtt.hosts=tcp://mqtt:1883
-connect.mqtt.service.quality=1
+
+\
+
+
+
+kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic mqtt --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
+
+
+kafka-avro-console-consumer --bootstrap-server kafka-broker-1:19093 --topic mqtt --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
+
+mosquitto_pub -m "{\"deviceId\":1,\"value\":31.1,\"region\":\"EMEA\",\"timestamp\":1482236627236}" -d -r -t DevtestTrue
+Start the connector 
+
+mosquitto_pub \
+    -m "{\"deviceId\":1,\"value\":31.1,\"region\":\"EMEA\",\"timestamp\":1482236627236}" \
+    -d -r -t /mjson
+Start the connector 
+
+
+"name": "Mqtt-Sensor-Source",
+"connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
+"tasks.max": 1,
+"connect.mqtt.kcql": "INSERT INTO sensor_data SELECT * FROM /sensor_data 
+  WITHCONVERTER: `com.datamountaineer.streamreactor.connect.converters.source.JsonSimpleConverter`
+  WITHKEY(id)",
+"connect.mqtt.connection.clean": "true",
+"connect.mqtt.connection.timeout: 1000,
+"connect.mqtt.connection.keep.alive: 1000,
+"connect.mqtt.client.id": "dm_source_id",
+"connect.mqtt.converter.throw.on.error": "true",
+"connect.mqtt.hosts: "tcp://mqtt:1883",
+"connect.mqtt.service.quality: 1,
+"key.converter": "org.apache.kafka.connect.json.JsonConverter",
+key.converter.schemas.enable: "false",
+value.converter: "org.apache.kafka.connect.json.JsonConverter",
+"value.converter.schemas.enable": "false"
+
+
+ kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic mqtt --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.consumer.ssl.config
+
+ curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "mqtt-source",
+            "connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
+            "tasks.max": "1",
+            "topics": "mqtt",
+            "connect.mqtt.connection.clean": "true",
+            "connect.mqtt.connection.timeout": "1000",
+            "connect.mqtt.kcql": "INSERT INTO mqtt SELECT * FROM /ais",
+            "connect.mqtt.connection.keep.alive": "1000",
+            "connect.mqtt.source.converters": "/ais=com.datamountaineer.streamreactor.connect.converters.source.AvroConverter",
+            "connect.converter.avro.schemas": "/ais=/etc/kafka/secrets/plugins/classAPositionReportSchema.json",
+            "connect.mqtt.client.id": "dm_source_id",
+            "connect.mqtt.converter.throw.on.error": "true",
+            "connect.mqtt.hosts": "tcp://mqtt:1883",
+            "connect.mqtt.service.quality": "1"
+        }'  http://localhost:8083/connectors/mqtt-source/config | jq .
+# in mqtt
+mosquitto_pub \
+    -m "{\"Type\": 384558914, \"Repeat\": 1429873353, \"MMSI\": 1421443607430111832, \"Speed\": 0.32155126, \"Accuracy\": true, \"Longitude\": 0.3627212439937161, \"Latitude\": 0.2725890739370421, \"Course\": 0.99500954, \"Heading\": -2064209033, \"Second\": -1096102271, \"RAIM\": true, \"Radio\": -189624595456590919, \"Status\": -139830130, \"Turn\": 0.035991907, \"Maneuver\": 1595359693, \"Timestamp\": -932628952948741103}" \
+    -d -r -t /ais -I dm_source_id
+
+# in schema_registry
+kafka-avro-console-consumer --bootstrap-server kafka-broker-1:19093 \
+                                      --topic mqtt \
+                                      --from-beginning \
+                                      --max-messages 10 \
+                                      --consumer.config /etc/kafka/secrets/host.consumer.ssl.config \
+                                      --property schema.registry.url=http://0.0.0.0:8081
+
+# in kafka-connect
+kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic mqtt \
+--from-beginning --consumer.config /etc/confluent/secrets/host.producer.ssl.config
+
+# not required
+curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{ "schema": "{\"type\": \"record\",    \"name\": \"aisClassAPositionReport\",    \"namespace\": \"com.landoop.ais\",    \"doc\": \"Schema for AIS Class A Position Reports.\",    \"fields\": [{\"name\": \"Type\",\"type\": \"int\",\"doc\": \"The type of the AIS Message. 1/2/3 are Class A position reports.\"},{\"name\": \"Repeat\",\"type\":\"int\",\"doc\": \"Repeat Indicator\"},{\"name\": \"MMSI\",\"type\": \"long\",\"doc\": \"User ID (MMSI)\"},{\"name\": \"Speed\",\"type\": \"float\",\"doc\": \"Speed over Ground (SOG)\"},{\"name\": \"Accuracy\",\"type\": \"boolean\",\"doc\": \"Position Accuracy\"},{\"name\": \"Longitude\",\"type\": \"double\",\"doc\": \"Longitude\"},{\"name\": \"Latitude\",\"type\": \"double\",\"doc\": \"Latitude\"},{\"name\": \"Course\",\"type\": \"float\",\"doc\": \"Course over Ground (COG)\"},{\"name\": \"Heading\",\"type\": \"int\",\"doc\": \"True Heading (HDG)\"},{\"name\": \"Second\",\"type\": \"int\",\"doc\": \"Time Stamp\"},{\"name\": \"RAIM\",\"type\": \"boolean\",\"doc\": \"RAIM flag\"},{\"name\": \"Radio\",\"type\": \"long\",\"doc\": \"Radio Status\"},{\"name\": \"Status\",\"type\": \"int\",\"doc\": \"Navigation Status (enumerated type)\"},{\"name\": \"Turn\",\"type\": \"float\",\"doc\": \"Rate of Turn (ROT)\"},{\"name\": \"Maneuver\",\"type\": \"int\",\"doc\": \"Manuever Indicator (enumerated type)\"},{\"name\": \"Timestamp\",\"type\": \"long\",\"doc\": \"Time the message was encoded to avro (nanoseconds since epoch). May be used for ordering.\"}]}"}' http://localhost:8081/subjects/mqtt-value/versions
+
+
+docker pull landoop/schema-registry-ui
+docker run --rm -p 8000:8000 \
+           -e "SCHEMAREGISTRY_URL=http://localhost:8081" \
+           landoop/schema-registry-ui

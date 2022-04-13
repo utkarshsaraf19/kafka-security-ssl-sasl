@@ -1,0 +1,28 @@
+kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic Devtest --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.producer.ssl.config
+
+kafka-avro-console-consumer \
+    --bootstrap-server kafka-broker-1:19093 \
+    --topic mqtt \
+    --from-beginning
+
+mosquitto_pub -m "{\"deviceId\":1,\"value\":31.1,\"region\":\"EMEA\",\"timestamp\":1482236627236}" -d -r -t DevtestTrue
+
+ '{"schema": "{\"type\":\"record\",\"name\":\"Payment\",\"namespace\":\"my.examples\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"amount\",\"type\":\"double\"}]}"}' http://localhost:8081/subjects/my-kafka-value/versions
+
+curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"schema": "{\"name\": \"MyClass\",\"type\": \"record\",
+  \"namespace\": \"com.acme.avro\",\"fields\": [{\"name\": \"deviceId\",\"type\": \"int\"
+    },
+    {
+      \"name\": \"value\",
+     \"type\": \"float\"
+    },
+    {
+      "name": "region",
+      "type": "string"
+    },
+    {
+      \"name\": \"timestamp\",
+      \"type\": \"long\"
+    }
+  ]
+"}' http://localhost:8081/subjects/mqtt-value/versions
