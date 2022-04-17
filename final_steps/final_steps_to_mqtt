@@ -1,35 +1,84 @@
-# run the cluster
+term# run the cluster
 ./start_no_ssl_only_cluster.sh
 
 # register converter for mqtt
 curl -X PUT \
      -H "Content-Type: application/json" \
      --data '{
-          "name": "mqtt-source",
+          "name": "mqtt-source-truncated",
             "connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
             "tasks.max": "1",
             "topics": "mqtt",
             "connect.mqtt.connection.clean": "true",
             "connect.mqtt.connection.timeout": "1000",
-            "connect.mqtt.kcql": "INSERT INTO mqtt SELECT * FROM /ais",
+            "connect.mqtt.kcql": "INSERT INTO mqtt1 SELECT * FROM /ais1",
             "connect.mqtt.connection.keep.alive": "1000",
-            "connect.mqtt.source.converters": "/ais=com.datamountaineer.streamreactor.connect.converters.source.AvroConverter",
-            "connect.converter.avro.schemas": "/ais=/etc/kafka/secrets/plugins/classAPositionReportSchema.json",
-            "connect.mqtt.client.id": "dm_source_id",
+            "connect.mqtt.source.converters": "/ais1=com.datamountaineer.streamreactor.connect.converters.source.AvroConverter",
+            "connect.converter.avro.schemas": "/ais1=/etc/kafka/secrets/plugins/classAPositionReportSchema.json",
+            "connect.mqtt.client.id": "dm_source_id_1",
             "connect.mqtt.converter.throw.on.error": "true",
             "connect.mqtt.hosts": "tcp://mqtt:1883",
             "connect.mqtt.service.quality": "1"
-        }'  http://localhost:8083/connectors/mqtt-source/config | jq .
+        }'  http://localhost:8083/connectors/mqtt-source-truncated/config | jq .
 
 # run consumer avro inschema registry
+sudo docker exec -it schema-registry /bin/bash
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "mqtt-source-truncated",
+            "connector.class": "com.datamountaineer.streamreactor.connect.mqtt.source.MqttSourceConnector",
+            "tasks.max": "1",
+            "topics": "mqtt",
+            "connect.mqtt.connection.clean": "true",
+            "connect.mqtt.connection.timeout": "1000",
+            "connect.mqtt.kcql": "INSERT INTO mqtt1 SELECT * FROM /ais1",
+            "connect.mqtt.connection.keep.alive": "1000",
+            "connect.mqtt.source.converters": "/ais1=com.datamountaineer.streamreactor.connect.converters.source.AvroConverter",
+            "connect.converter.avro.schemas": "/ais1=/etc/kafka/secrets/plugins/classAPositionReportSchema.json",
+            "connect.mqtt.client.id": "dm_source_id_1",
+            "connect.mqtt.converter.throw.on.error": "true",
+            "connect.mqtt.hosts": "tcp://mqtt:1883",
+            "connect.mqtt.service.quality": "1"
+        }'  http://localhost:8083/connectors/mqtt-source-truncated/config | jq .
+
+# publish message on broker
+sudo docker exec -it mqtt /bin/bash
+mosquitto_pub \
+    -m "{\"Type\": 384558914, \"Repeat\": 1429873353}" \
+    -d -r -t /ais1 -I dm_source_id_1
+
 kafka-avro-console-consumer --bootstrap-server kafka-broker-1:19093 \
-                                      --topic mqtt \
+                                      --topic mqtt1 \
                                       --from-beginning \
                                       --max-messages 10 \
                                       --consumer.config /etc/kafka/secrets/host.consumer.ssl.config \
                                       --property schema.registry.url=http://0.0.0.0:8081
+    
+# register converter for mqtt
+curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "postgres-sink",
+            "connector.class": "org.apache.camel.kafkaconnector.postgresqlsink.CamelPostgresqlsinkSinkConnector",
+            "camel.kamelet.postgresql-sink.serverName": "db",
+            "camel.kamelet.postgresql-sink.serverPort": "5432",
+            "camel.kamelet.postgresql-sink.username": "postgres",
+            "camel.kamelet.postgresql-sink.password": "postgres",
+            "topics": "test",
+            "camel.kamelet.postgresql-sink.query": "INSERT INTO accounts (Type,Repeat) VALUES (:#Type,:#Repeat)",
+            "camel.kamelet.postgresql-sink.databaseName": "sensor"
+        }'  http://localhost:8083/connectors/postgres-sink/config | jq .
 
-# publish message on broker
-mosquitto_pub \
-    -m "{\"Type\": 384558914, \"Repeat\": 1429873353, \"MMSI\": 1421443607430111832, \"Speed\": 0.32155126, \"Accuracy\": true, \"Longitude\": 0.3627212439937161, \"Latitude\": 0.2725890739370421, \"Course\": 0.99500954, \"Heading\": -2064209033, \"Second\": -1096102271, \"RAIM\": true, \"Radio\": -189624595456590919, \"Status\": -139830130, \"Turn\": 0.035991907, \"Maneuver\": 1595359693, \"Timestamp\": -932628952948741103}" \
-    -d -r -t /ais -I dm_source_id 
+        
+        curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "mqtt-source",
+            "connector.class": "org.apache.camel.kafkaconnector.mqttsource.CamelMqttsourceSourceConnector",
+            "camel.kamelet.mqtt-source.topic": "/ais1",
+            "camel.kamelet.mqtt-source.brokerUrl": "tcp://mqtt:1883",
+            "camel.kamelet.mqtt-source.clientId": "dm_source_id_1"
+        }'  http://localhost:8083/connectors/mqtt-source/config | jq .
+        
+        kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic test --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
