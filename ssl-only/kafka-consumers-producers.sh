@@ -32,8 +32,7 @@ winpty docker run  --name admin -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/e
 Clean up 
 
 
-export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
-sudo docker run --name producer-dev -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-producer --broker-list kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --topic Devtest --producer.config /etc/kafka/secrets/host.producer.ssl.config
+
 
 export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
 sudo docker run --name producer-UI -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-producer --broker-list kafka-broker-1:19093,kafka-broker-2:29093,kafka-broker-3:39093 --topic UItest --producer.config /etc/kafka/secrets/host.producer.ssl.config

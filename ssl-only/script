@@ -1,0 +1,10 @@
+from confluent_kafka import Producer
+
+broker = "kafka-broker-1:19093"
+topic = "Devtest"
+security_protocol = "SSL"
+ssl_keystore_location = "/etc/kafka/secrets/producer/kafka.producer.keystore.jks"
+ssl_keystore_password = "confluent"
+conf = {'bootstrap.servers': broker, 'security.protocol': security_protocol, 'ssl.keystore.location': ssl_keystore_location, 'ssl.keystore.password': ssl_keystore_password}
+
+p = Producer(**conf)

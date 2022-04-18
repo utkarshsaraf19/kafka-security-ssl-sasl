@@ -56,29 +56,6 @@ kafka-avro-console-consumer --bootstrap-server kafka-broker-1:19093 \
                                       --property schema.registry.url=http://0.0.0.0:8081
     
 # register converter for mqtt
-curl -X PUT \
-     -H "Content-Type: application/json" \
-     --data '{
-          "name": "postgres-sink",
-            "connector.class": "org.apache.camel.kafkaconnector.postgresqlsink.CamelPostgresqlsinkSinkConnector",
-            "camel.kamelet.postgresql-sink.serverName": "db",
-            "camel.kamelet.postgresql-sink.serverPort": "5432",
-            "camel.kamelet.postgresql-sink.username": "postgres",
-            "camel.kamelet.postgresql-sink.password": "postgres",
-            "topics": "test",
-            "camel.kamelet.postgresql-sink.query": "INSERT INTO accounts (Type,Repeat) VALUES (:#Type,:#Repeat)",
-            "camel.kamelet.postgresql-sink.databaseName": "sensor"
-        }'  http://localhost:8083/connectors/postgres-sink/config | jq .
 
-        
-        curl -X PUT \
-     -H "Content-Type: application/json" \
-     --data '{
-          "name": "mqtt-source",
-            "connector.class": "org.apache.camel.kafkaconnector.mqttsource.CamelMqttsourceSourceConnector",
-            "camel.kamelet.mqtt-source.topic": "/ais1",
-            "camel.kamelet.mqtt-source.brokerUrl": "tcp://mqtt:1883",
-            "camel.kamelet.mqtt-source.clientId": "dm_source_id_1"
-        }'  http://localhost:8083/connectors/mqtt-source/config | jq .
-        
+
         kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic test --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config

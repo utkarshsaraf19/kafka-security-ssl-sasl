@@ -1,0 +1,69 @@
+ 
+1. SSL setup
+ A. Generate certificates
+ B. Spin up cluster and put jars for kafka connect to load up plugins for sink and source configuration
+ sudo su 
+ docker ps -aq | xargs docker stop | xargs docker rm
+ cd Desktop/kafka-security-ssl-sasl
+ ./start_no_ssl_only_cluster.sh
+ 
+ C. Create topics
+ export KAFKA_SSL_SECRETS_DIR=$PWD/secrets
+ sudo docker exec -it kafka-broker-1 /bin/bash
+ 
+ kafka-topics --bootstrap-server kafka-broker-1:19093 --create --topic ubisofttest --partitions 10 --replication-factor 1 --command-config /etc/kafka/secrets/host.broker-1.ssl.config
+
+ # write access to topics prefixed with Dev for user having ssl certificate of kafka-producer
+ kafka-acls --bootstrap-server kafka-broker-1:19093 --command-config /etc/kafka/secrets/host.broker-1.ssl.config --add --allow-host '*' --allow-principal User:CN=kafka-producer,OU=Dev,O=HusseinJoe,L=Melbourne,ST=VIC,C=AU --operation write --topic ubisoft --resource-pattern-type prefixed
+ 
+ # List all access
+ kafka-acls --bootstrap-server kafka-broker-1:19093 --command-config /etc/kafka/secrets/host.broker-1.ssl.config --list
+ 
+ # bring up container with ssl certificate of producer
+export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
+sudo docker run --name producer-dev -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/producer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-producer --broker-list kafka-broker-1:19093 --topic ubisofttest --producer.config /etc/kafka/secrets/host.producer.ssl.config
+ 
+ # bring up consumer
+ export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
+sudo docker run --name consumer-dev -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/consumer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic ubisofttest --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
+
+ # read access to topics prefixed with Dev for user having ssl certificate of kafka-producer
+ kafka-acls --bootstrap-server kafka-broker-1:19093 --command-config /etc/kafka/secrets/host.broker-1.ssl.config --add --allow-host '*' --allow-principal User:CN=kafka-consumer,OU=Dev,O=HusseinJoe,L=Melbourne,ST=VIC,C=AU --operation read --topic ubisoft --resource-pattern-type prefixed
+ 
+  # bring up consumer
+ export KAFKA_SSL_SECRETS_DIR=/home/q/Desktop/certificates/kafka-security-ssl-sasl/secrets
+sudo docker run --name consumer-dev -it --rm -v ${KAFKA_SSL_SECRETS_DIR}/consumer:/etc/kafka/secrets --network kafka-cluster-network confluentinc/cp-kafka:latest kafka-console-consumer --bootstrap-server kafka-broker-1:19093 --topic ubisofttest --from-beginning --consumer.config /etc/kafka/secrets/host.consumer.ssl.config
+
+ D. Create connectors for mqtt-source and postgres sink.
+ curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "postgres-sink",
+            "connector.class": "org.apache.camel.kafkaconnector.postgresqlsink.CamelPostgresqlsinkSinkConnector",
+            "camel.kamelet.postgresql-sink.serverName": "db",
+            "camel.kamelet.postgresql-sink.serverPort": "5432",
+            "camel.kamelet.postgresql-sink.username": "postgres",
+            "camel.kamelet.postgresql-sink.password": "postgres",
+            "topics": "test",
+            "camel.kamelet.postgresql-sink.query": "INSERT INTO accounts (Type,Repeat) VALUES (:#Type,:#Repeat)",
+            "camel.kamelet.postgresql-sink.databaseName": "sensor"
+        }'  http://localhost:8083/connectors/postgres-sink/config | jq .
+
+        
+        curl -X PUT \
+     -H "Content-Type: application/json" \
+     --data '{
+          "name": "mqtt-source",
+            "connector.class": "org.apache.camel.kafkaconnector.mqttsource.CamelMqttsourceSourceConnector",
+            "camel.kamelet.mqtt-source.topic": "/ais1",
+            "camel.kamelet.mqtt-source.brokerUrl": "tcp://mqtt:1883",
+            "camel.kamelet.mqtt-source.clientId": "dm_source_id_1"
+        }'  http://localhost:8083/connectors/mqtt-source/config | jq .
+        
+    
+        docker exec -it mqtt bash
+        
+        sudo docker exec -it mqtt /bin/bash
+mosquitto_pub \
+    -m "{\"Type\": 384558914, \"Repeat\": 1429873353}" \
+    -d -r -t /ais1 -I dm_source_id_1
